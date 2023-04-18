@@ -15,9 +15,8 @@ mpi_comm = MPI.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()
 mpi_size = mpi_comm.Get_size()
 
-def solid_perimeter_generation(triangles) -> None:
+def solid_perimeter_generation(triangles,dist_resolution) -> None:
 
-        resolution=0.5 #new point spacing 
         perimeter=[]
         for tri in triangles:
                 v1=np.zeros(3)
@@ -32,7 +31,7 @@ def solid_perimeter_generation(triangles) -> None:
                         v1=tri[0]
                         v2=tri[1]
                 
-                nsteps=int(np.linalg.norm(v2-v1)/resolution)
+                nsteps=int(np.linalg.norm(v2-v1)/dist_resolution)
                 if nsteps>1: 
                         dLam=1.0/nsteps
                         Lam=0.0
@@ -48,12 +47,12 @@ def solid_perimeter_generation(triangles) -> None:
 
         return np.array(perimeter)
 
-def geometrical_data_extractor(target_mesh,horizontal_triangles,vertical_triangles):
+def geometrical_data_extractor(target_mesh,horizontal_triangles,vertical_triangles,dist_resolution):
 
         h_triangles=np.copy(horizontal_triangles)
         h_triangles[:,:,2]=0
         
-        perimeter=solid_perimeter_generation(vertical_triangles)
+        perimeter=solid_perimeter_generation(vertical_triangles,dist_resolution)
 
         points=np.copy(target_mesh)
         points[:,2]=0.0
@@ -222,24 +221,18 @@ def move_stl(stl,displacement=np.array([0, 0, 0])):
 		
 		return stl
 
-
-def geometrical_magnitudes(STL_FILE,target_mesh,angle=0.0,stl_scale=1.0):
-
+def geometrical_magnitudes(STL_FILE,target_mesh,stl_angle=[0.0,0.0,0.0],stl_displ=[0.0,0.0,0.0],stl_scale=1.0,dist_resolution=1.0):
 		my_mesh = mesh.Mesh.from_file(STL_FILE)
 
 		triangles = stl_scale*my_mesh.vectors
-		triangles = rotate_stl(triangles,[0, 0,angle])
-		triangles = move_stl(triangles,[-650.0,-650.0,0.0])
-		#display_triangles(triangles)
+		triangles = rotate_stl(triangles,stl_angle,stl_displ)
+		triangles = move_stl(triangles,stl_displ)
 
 		horizontal_triangles=triangles[(triangles[:,0,2]==triangles[:,1,2]) & (triangles[:,0,2]==triangles[:,2,2]) & (triangles[:,0,2]!=0)]
 		vertical_triangles=triangles[((triangles[:,0,2]==0) & (triangles[:,1,2]==0) & (triangles[:,2,2]!=0)) | \
                		                ((triangles[:,0,2]==0) & (triangles[:,1,2]!=0) & (triangles[:,2,2]==0)) | \
                         	        ((triangles[:,0,2]!=0) & (triangles[:,1,2]==0) & (triangles[:,2,2]==0))]
 
-		#triangles=np.array([[[0.0,0.0,0.0],[1.0,0.0,0.0],[0.0,1.0,0.0]],[[1.0,0.0,0.0],[1.0,1.0,0.0],[0.0,1.0,0.0]]])
-		#display_triangles(triangles)
-
-		fields=geometrical_data_extractor(target_mesh,horizontal_triangles,vertical_triangles)
+		fields=geometrical_data_extractor(target_mesh,horizontal_triangles,vertical_triangles,dist_resolution)
 
 		return fields
